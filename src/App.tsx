@@ -417,7 +417,8 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error('TTS Service failure');
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Fallo en el servicio de voz de Gemini.');
       }
 
       const data = await response.json();
@@ -434,9 +435,9 @@ export default function App() {
           setPlayingTtsIndex(null);
         };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating TTS:', error);
-      alert('Error en el servicio de voz de Gemini. Asegúrate de que tu GEMINI_API_KEY esté configurada.');
+      alert(`Error en el servicio de voz de Gemini: ${error.message || error}`);
       setPlayingTtsIndex(null);
     }
   };
@@ -462,7 +463,8 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error('TTS Service failure');
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Fallo en el servicio de voz de Gemini.');
       }
 
       const data = await response.json();
@@ -492,8 +494,9 @@ export default function App() {
       } else {
         stopSequentialPlayback();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error playing sequence:', error);
+      alert(`Error en la secuencia: ${error.message || error}`);
       stopSequentialPlayback();
     }
   };

@@ -9,16 +9,26 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-// Initialize Gemini SDK with User-Agent for telemetry
-const apiKey = process.env.GEMINI_API_KEY;
-const ai = new GoogleGenAI({
-  apiKey: apiKey,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
+// Initialize Gemini SDK with User-Agent for telemetry lazy-loaded to prevent startup crashes when GEMINI_API_KEY is not defined
+let aiClient: GoogleGenAI | null = null;
+
+function getAI(): GoogleGenAI {
+  if (!aiClient) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) {
+      throw new Error('La variable de entorno GEMINI_API_KEY no está configurada. Por favor, configúrala en la sección de Settings.');
     }
+    aiClient = new GoogleGenAI({
+      apiKey: key,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
   }
-});
+  return aiClient;
+}
 
 // Mock/cached storage for generated videos to persist state during the session
 // We can use a JSON file or in-memory map. Let's use an in-memory store.
@@ -34,7 +44,7 @@ interface VideoOperation {
 const activeOperations: Record<string, VideoOperation> = {};
 
 // Ensure we have API key
-if (!apiKey) {
+if (!process.env.GEMINI_API_KEY) {
   console.warn("WARNING: GEMINI_API_KEY environment variable is not set. API calls will fail.");
 }
 
@@ -69,7 +79,7 @@ app.post('/api/generate-video', async (req, res) => {
     console.log(`Starting video generation for drama: ${dramaId} with prompt: "${prompt}"`);
     
     // We call the model specified by the platform: veo-3.1-fast-generate-preview
-    const operation = await ai.models.generateVideos({
+    const operation = await getAI().models.generateVideos({
       model: 'veo-3.1-fast-generate-preview',
       prompt: prompt,
       config: {
@@ -117,7 +127,7 @@ app.post('/api/video-status', async (req, res) => {
     op.name = operationName;
     
     console.log(`Polling status for operation: ${operationName}`);
-    const updated = await ai.operations.getVideosOperation({ operation: op });
+    const updated = await getAI().operations.getVideosOperation({ operation: op });
     
     if (id && activeOperations[id]) {
       if (updated.done) {
@@ -159,7 +169,7 @@ app.get('/api/video-download', async (req, res) => {
     console.log(`Retrieving and streaming video from operation: ${operationName}`);
     const op = new GenerateVideosOperation();
     op.name = operationName;
-    const updated = await ai.operations.getVideosOperation({ operation: op });
+    const updated = await getAI().operations.getVideosOperation({ operation: op });
     
     const uri = updated.response?.generatedVideos?.[0]?.video?.uri;
     if (!uri) {
@@ -168,7 +178,7 @@ app.get('/api/video-download', async (req, res) => {
 
     console.log(`Downloading original video stream from: ${uri}`);
     const videoRes = await fetch(uri, {
-      headers: { 'x-goog-api-key': apiKey || '' },
+      headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY || '' },
     });
 
     if (!videoRes.ok) {
@@ -235,7 +245,7 @@ Devuelve SOLO el JSON, sin bloques de código Markdown ni explicaciones adiciona
 Frutas: ${fruits}
 Conflicto: ${conflict}`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: "gemini-3.5-flash",
       contents: promptText,
       config: {
@@ -266,7 +276,7 @@ app.post('/api/generate-tts', async (req, res) => {
   try {
     console.log(`Generating dramatic voice for: "${text}" using voice: ${selectedVoice}`);
     
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: "gemini-3.1-flash-tts-preview",
       contents: [{ parts: [{ text: `Say with deep theatrical passion, intense dramatic emotion, and theatrical pause: ${text}` }] }],
       config: {
