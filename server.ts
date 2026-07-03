@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { GoogleGenAI, GenerateVideosOperation } from '@google/genai';
+import { GoogleGenAI, GenerateVideosOperation, Modality } from '@google/genai';
 
 dotenv.config();
 
@@ -280,7 +280,7 @@ app.post('/api/generate-tts', async (req, res) => {
       model: "gemini-3.1-flash-tts-preview",
       contents: [{ parts: [{ text: `Say with deep theatrical passion, intense dramatic emotion, and theatrical pause: ${text}` }] }],
       config: {
-        responseModalities: ['AUDIO'],
+        responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
             prebuiltVoiceConfig: { voiceName: selectedVoice },
