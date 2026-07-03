@@ -1,0 +1,6 @@
+{
+  "name": "Dramas de Frutas",
+  "description": "Teatro dramático de frutas con guiones interactivos generados por IA y trailers de video teatrales alimentados por Veo 3.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
